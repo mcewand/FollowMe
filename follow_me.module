@@ -1,0 +1,109 @@
+<?php
+
+/**
+ * Implementation of hook_block_info();
+ */
+function follow_me_block_info() {
+  $blocks = array();
+  $blocks['follow_me_block'] = array(
+    'info' => t('Social Media Follow'),
+    'cache' => DRUPAL_CACHE_PER_PAGE, 
+  );
+  return $blocks;
+}
+
+/**
+ * Implementation of hook_block_view();
+ */
+function follow_me_block_view($delta) {
+  if ($delta == 'follow_me_block') {
+    global $base_url;
+    
+    $options = array(
+      'twitter' => array(
+        'name' => 'Twitter',
+        'url' => 'http://twitter.com/#!/',
+      ),
+      'linkedin' => array(
+        'name' => 'LinkedIn',
+        'url' => 'http://www.linkedin.com/in/',
+      ),
+      'github' => array(
+        'name' => 'GitHub',
+        'url' => 'http://www.github.com/',
+      ),
+      'facebook' => array(
+        'name' => 'Facebook',
+        'url' => 'http://www.facebook.com/',
+      ),
+      'reddit' => array(
+        'name' => 'Reddit',
+        'url' => 'http://www.reddit.com/user/',
+      ),
+      'flickr' => array(
+        'name' => 'Flickr',
+        'url' => 'http://www.flickr.com/photos/',
+      ),
+      'googleplus' => array(
+        'name' => 'Google+',
+        'url' => 'http://plus.google.com/',
+      ),
+      'rss' => array(
+        'name'=> 'Site Rss',
+        'url' => $base_url . '/',
+      ), 
+    );
+    //@todo add admin structure to enter the desired ids for this array
+    $config = array(
+      'linkedin' => 'danielmcewan',
+      'twitter' => 'al_waqt',
+      'github' => 'mcewand',
+      'flickr' => 'danmcewan',
+      'googleplus' => '104538832958282540813',
+      'rss' => 'rss.xml',
+      //'facebook' => 'dan.mcewan',
+      //'reddit' => 'al_waqt',
+    );
+    $site_links = array();
+    foreach ($options as $site => $elements) {
+      if (isset($config[$site])) {
+        $site_links[$site] = l('<img src="'. $base_url . '/' . drupal_get_path('module', 'follow_me') .'/images/'. $site . '.png" alt="'.$elements['name'] .'" />',
+          $elements['url'] . $config[$site], 
+          array(
+            'attributes' => array(
+              'title' => 'Follow me on ' . $elements['name'],
+              'target' => '_blank',
+          ),
+          'external' => TRUE,
+          'html' => TRUE,
+        )); 
+      }
+    }
+    
+    //display config
+    $style = 'display:inline';
+    
+    $args = array(
+      'sites' => $site_links, 
+      'style' => $style,
+    );
+    $content = theme('follow_me_block', $args);	
+    $block = array(
+      'subject' => '',
+      'content' => $content,
+    );
+    return $block; 
+  }
+}
+
+/**
+ * Implementation of hook_block_view();
+ */
+function follow_me_theme() {
+  return array(
+    'follow_me_block' => array(
+      'variables' => array($args = NULL),
+      'template' => 'follow-me-block',
+    ),
+  );
+}
