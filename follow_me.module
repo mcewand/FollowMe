@@ -56,7 +56,7 @@ function follow_me_block_view($delta) {
     //@todo add admin structure to enter the desired ids for this array
     $config = array(
       'linkedin' => 'danielmcewan',
-      'twitter' => 'al_waqt',
+      'twitter' => 'mcewand',
       'github' => 'mcewand',
       'flickr' => 'danmcewan',
       'googleplus' => '104538832958282540813',
