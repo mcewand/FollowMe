@@ -5,7 +5,7 @@ $plugin = array(
   'description' => t('Connect your Google+ Account'),
   'callback' => 'follow_me_googleplus',
   'service name' => 'Google+',
-  'url' => 'http://plus.github.com/',
+  'url' => 'http://plus.google.com/',
 
 );
 
