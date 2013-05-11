@@ -1,21 +1,16 @@
 <?php
 
 /**
- * Implementation of hook_menu.
+ * Implementation of hook_menu().
+ *
+ * Provides a menu for selecting services to include
+ * and entering a username for each.
  */
 
 function follow_me_menu(){
   $items = array();
-  $items['admin/config/follow_me'] = array(
+  $items['admin/config/services/follow_me'] = array(
     'title' => t('Follow Me'),
-    'description' => t('Select and configure Social Media'),
-    'page callback' => 'system_admin_menu_block_page',
-    'access arguments' => array('access administration pages'),
-    'file path' => drupal_get_path('module', 'system'),
-    'file' => 'system.admin.inc',
-  );
-  $items['admin/config/follow_me/accounts'] = array(
-    'title' => t('Configure Accounts'),
     'description' => t('Select and configure connected accounts'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('follow_me_accounts_config'),
@@ -23,9 +18,7 @@ function follow_me_menu(){
     'file path' => drupal_get_path('module', 'system'),
     'file' => 'system.admin.inc',
   );
-
   return $items;
-
 }
 
 function follow_me_accounts_config() {
@@ -36,54 +29,18 @@ function follow_me_accounts_config() {
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
   );
-  $types = variable_get('follow_me_type', array());
-  $form['follow_me_type']['github']['active'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Github'),
-    '#default_value' => (($types['github']['active'] == 1) ? 1 : 0),
-
-    '#description' => t("Enable Github?"),
-    '#required' => FALSE,
-  );
-  $form['follow_me_type']['github']['account'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Github'),
-    '#default_value' => ((isset($types['github']['account']) == TRUE) ? $types['github']['account'] : NULL),
-    '#size' => 60,
-    '#maxlength' => 60,
-    '#description' => t("Enter your Github user name"),
-    '#required' => FALSE,
-  );
+//@todo sloppy - still figuring out some things here
+  ctools_include('plugins');
+  $accounts = ctools_get_plugins('follow_me', 'follow_me_handler');
+  foreach($accounts as $service) {
+    $processed = call_user_func($service['callback']);
+    $form['follow_me_type'][$service['name']] = array(
+      'active' => $processed[$service['name']]['active'],
+      'account' => $processed[$service['name']]['account'],
+    );
+  }
 
   return system_settings_form($form);
-}
-
-/**
- * Follow Me Handler Information
- *
- * Return a list of all handlers that might connect an account.
- */
-function follow_me_handler_info($field_type = NULL) {
-  ctools_include('plugins');
-
-  static $handlers;
-  if (!$handlers) {
-    $handlers = ctools_get_plugins('follow_me', 'follow_me_handler');
-  }
-  return $handlers;
-}
-
-/**
- * Fetch follow_me handler
- *
- * Given a name, fetch the full handler definition
- */
-function follow_me_get_handler($handler_name) {
-  $handlers = follow_me_handler_info();
-  if (isset($handlers[$handler_name])) {
-    return $handlers[$handler_name];
-  }
-  else return FALSE;
 }
 
 /**
@@ -94,15 +51,7 @@ function follow_me_ctools_plugin_api() {
 }
 
 /**
- * Implementation of hook_ctools_plugin_dierctory() to let the system know
- * we implement plugins.
- */
-function follow_me_ctools_plugin_directory($module, $plugin) {
-  return 'plugins/' . $plugin;
-}
-
-/**
- * Implements hook_ctools_plugin_type
+ * Implementation of hook_ctools_plugin_type().
  */
 function follow_me_ctools_plugin_type() {
   return array(
@@ -110,18 +59,35 @@ function follow_me_ctools_plugin_type() {
   );
 }
 
-
-
-
-
-
-
-
-
-
+/**
+ * Implementation of hook_ctools_plugin_directory().
+ */
+function follow_me_ctools_plugin_directory($module, $plugin) {
+  return 'plugins/' . $plugin;
+}
 
 /**
- * Implementation of hook_block_info.
+ * Return a list of all account handlers.
+ */
+function follow_me_handler_info() {
+  ctools_include('plugins');
+
+  static $handlers;
+  if (!$handlers) {
+    $handlers = ctools_get_plugins('follow_me', 'follow_me_handler');
+  }
+  return $handlers;
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function follow_me_form_follow_me_accounts_config_alter($form, &$form_state, $form_id){
+  drupal_add_js(drupal_get_path('module', 'follow_me') .'/js/admin.js', 'file');
+}
+
+/**
+ * Implementation of hook_block_info().
  */
 function follow_me_block_info() {
   $blocks = array();
@@ -133,65 +99,27 @@ function follow_me_block_info() {
 }
 
 /**
- * Implementation of hook_block_view.
+ * Implementation of hook_block_view().
  */
 function follow_me_block_view($delta) {
   if ($delta == 'follow_me_block') {
     global $base_url;
 
-    $options = array(
-      'twitter' => array(
-        'name' => 'Twitter',
-        'url' => 'http://twitter.com/#!/',
-      ),
-      'linkedin' => array(
-        'name' => 'LinkedIn',
-        'url' => 'http://www.linkedin.com/in/',
-      ),
-      'github' => array(
-        'name' => 'GitHub',
-        'url' => 'http://www.github.com/',
-      ),
-      'facebook' => array(
-        'name' => 'Facebook',
-        'url' => 'http://www.facebook.com/',
-      ),
-      'reddit' => array(
-        'name' => 'Reddit',
-        'url' => 'http://www.reddit.com/user/',
-      ),
-      'flickr' => array(
-        'name' => 'Flickr',
-        'url' => 'http://www.flickr.com/photos/',
-      ),
-      'googleplus' => array(
-        'name' => 'Google+',
-        'url' => 'http://plus.google.com/',
-      ),
-      'rss' => array(
-        'name'=> 'Site Rss',
-        'url' => $base_url . '/',
-      ),
-    );
-    //@todo add admin structure to enter the desired ids for this array
-    $config = array(
-      'linkedin' => 'danielmcewan',
-      'twitter' => 'mcewand',
-      'github' => 'mcewand',
-      'flickr' => 'danmcewan',
-      'googleplus' => '104538832958282540813',
-      'rss' => 'rss.xml',
-      //'facebook' => 'dan.mcewan',
-      //'reddit' => 'al_waqt',
-    );
+    //get accounts that exist
+    $user_accounts = variable_get('follow_me_type');
+
+    ctools_include('plugins');
+    $services = ctools_get_plugins('follow_me', 'follow_me_handler');
+
     $site_links = array();
-    foreach ($options as $site => $elements) {
-      if (isset($config[$site])) {
-        $site_links[$site] = l('<img src="'. $base_url . '/' . drupal_get_path('module', 'follow_me') .'/images/'. $site . '.png" alt="'.$elements['name'] .'" />',
-          $elements['url'] . $config[$site],
+    foreach ($user_accounts as $site => $data) {
+
+      if (isset($data['active']) && $data['active'] == 1){
+        $site_links[$site] = l('<img src="'. $base_url . '/' . drupal_get_path('module', 'follow_me') .'/images/'. $site . '.png" alt="'. $services[$site]['name'] .'" />',
+          $services[$site]['url'] . $data['account'],
           array(
             'attributes' => array(
-              'title' => 'Follow me on ' . $elements['name'],
+              'title' => 'Follow me on ' . $services[$site]['service name'],
               'target' => '_blank',
           ),
           'external' => TRUE,
@@ -217,7 +145,8 @@ function follow_me_block_view($delta) {
 }
 
 /**
- * Implementation of hook_block_view();
+ * Implementation of hook_block_view().
+ * @todo - move to render array
  */
 function follow_me_theme() {
   return array(
@@ -228,10 +157,3 @@ function follow_me_theme() {
   );
 }
 
-function follow_me_ctools_plugin_directory($owner, $plugin_type) {
-  // We'll be nice and limit scandir() calls.
-  if ($owner == 'ctools' && ($plugin_type == 'github'
-    || $plugin_type == 'twitter')) {
-    return 'plugins/' . $plugin_type;
-  }
-}
